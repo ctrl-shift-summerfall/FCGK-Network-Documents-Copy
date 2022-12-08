@@ -182,8 +182,11 @@ def write_results(path: str, teachers_list: list):
         # Writing headers:
         cell_header_class_name: str = f'{HEADER_CLASS_NAME_COLUMN}{RESERVED_ROW}'
         worksheet[cell_header_class_name] = 'Class'
+        worksheet[cell_header_class_name].alignment = Alignment(horizontal='center')
         cell_header_teacher_name: str = f'{HEADER_TEACHER_NAME_COLUMN}{RESERVED_ROW}'
         worksheet[cell_header_teacher_name] = 'Teacher'
+        worksheet[cell_header_teacher_name].alignment = Alignment(horizontal='center')
+
 
         # Writing weeks:
         alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -193,13 +196,12 @@ def write_results(path: str, teachers_list: list):
             column: str = alphabet[alphabet_index]
             cell_header_week: str = f'{column}{row}'
             worksheet[cell_header_week] = week
-            worksheet[cell_header_week].alignment = Alignment(horizontal='center')
             HEADER_WEEK_DICT[week] = column
             alphabet_index += 1
 
         # Adjusting style (column width):      
         dim_holder = DimensionHolder(worksheet)
-        for dim_column in range(3, WEEK_RANGE + 1):
+        for dim_column in range(3, len(alphabet) + 1):
             column_index: int = dim_column - 1
             column: str = alphabet[column_index]
             dim_holder[column] = ColumnDimension(worksheet, min=dim_column, max=dim_column, 
