@@ -2,14 +2,11 @@
 import os
 import shutil
 import datetime
-
-# Local scripts and modules:
-from connect import connect_network
+import openpyxl
 
 # Local class objects:
 from teacher import Teacher
 from lp import LessonPlan
-
 
 # Folder variables:
 LP_UOI_TAG: str = 'UOI'
@@ -17,6 +14,21 @@ LP_ESL_TAG: str = 'English'
 LP_FOLDER_PATH: str = r'N:\2022-2023上学期\International Classes国际班'
 LP_UOI_FOLDER_PATH: str = os.path.join(LP_FOLDER_PATH, LP_UOI_TAG)
 LP_ESL_FOLDER_PATH: str = os.path.join(LP_FOLDER_PATH, LP_ESL_TAG)
+
+
+def connect_network():
+
+    # Address and user settings:
+    NETWORK_ADDRESS: str = r'\\KindergartenNAS\HC-Kindergarden'
+    NETWORK_DRIVE_ASSIGNED: str = 'N:'
+    USER_REQUIRED: bool = False
+    USER_NAME: str = 'teacher'
+    USER_PASSWORD: str = 'hc@laoshi123'
+    
+    # Establishing new connection:
+    command_prompt: str = f'net use {NETWORK_DRIVE_ASSIGNED} {NETWORK_ADDRESS} /p:yes '
+    if USER_REQUIRED: command_prompt += '/user:{USER_NAME} {USER_PASSWORD}'
+    os.system(command_prompt)
 
 
 def get_teachers_list():
@@ -130,6 +142,81 @@ def make_session_folder_map(teachers_list: list, session_timestamp: str):
                     os.mkdir(subject_tag_folder_path)
 
 
+def write_results(path: str, teachers_list: list):
+
+    # Workbook attributes:
+    WORKBOOK_FILENAME: str = 'results.xlsx'
+    WORKBOOK_FILEPATH: str = os.path.join(path, WORKBOOK_FILENAME)
+
+    # Worksheet attributes:
+    WEEK_RANGE: int = 24
+    RESERVED_ROW: int = 1
+    HEADER_CLASS_NAME_COLUMN: str = 'A'
+    HEADER_TEACHER_NAME_COLUMN: str = 'B'
+    HEADER_WEEK_DICT: dict = {}
+
+    # Creating new workbook:
+    workbook = openpyxl.Workbook()
+
+    # Creating worksheets:
+    subject_tags: list = []
+    for teacher in teachers_list:
+        teacher: Teacher
+        for subject_tag in teacher.lp_list:
+            subject_tag: str
+            subject_tags.append(subject_tag)
+            if subject_tag not in workbook.sheetnames:
+                workbook.create_sheet(subject_tag)
+    default_worksheet_name: str = 'Sheet'
+    del workbook[default_worksheet_name]
+    
+    # Preparing workbook by adding basic structure:
+    for subject_tag in subject_tags:
+        worksheet = workbook[subject_tag]
+
+        # Writing headers:
+        cell_header_class_name: str = f'{HEADER_CLASS_NAME_COLUMN}{RESERVED_ROW}'
+        worksheet[cell_header_class_name] = 'Class'
+        cell_header_teacher_name: str = f'{HEADER_TEACHER_NAME_COLUMN}{RESERVED_ROW}'
+        worksheet[cell_header_teacher_name] = 'Teacher'
+
+        # Writing weeks:
+        alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        alphabet_index: int = alphabet.index(HEADER_TEACHER_NAME_COLUMN) + 1
+        for week in range(1, WEEK_RANGE + 1):
+            row: int = RESERVED_ROW
+            column: str = alphabet[alphabet_index]
+            cell_header_week: str = f'{column}{row}'
+            worksheet[cell_header_week] = week
+            HEADER_WEEK_DICT[week] = column
+            alphabet_index += 1
+
+        # Writing results:
+        row = RESERVED_ROW + 1
+        for teacher in teachers_list:
+            teacher: Teacher
+
+            # Class and teacher information:
+            cell_class_id: str = f'{HEADER_CLASS_NAME_COLUMN}{row}'
+            worksheet[cell_class_id] = teacher.class_id
+            cell_teacher_name: str = f'{HEADER_TEACHER_NAME_COLUMN}{row}'
+            worksheet[cell_teacher_name] = teacher.name
+
+            # Lesson plans:
+            for lesson_plan in teacher.lp_list[subject_tag]:
+                lesson_plan: LessonPlan
+                if lesson_plan.week_num != 0 :
+                    column: int = HEADER_WEEK_DICT[lesson_plan.week_num]
+                    cell_lesson_plan: str = f'{column}{row}'
+                    worksheet[cell_lesson_plan] = '+'
+            
+            # Next teacher:
+            row += 1
+
+    # Saving workbook:
+    workbook.save(filename=WORKBOOK_FILEPATH)
+
+
 def main():
 
     # Checking and establishing connection:
@@ -148,7 +235,6 @@ def main():
     make_session_folder_map(teachers_list, session_timestamp)
 
     # Working with lesson plans:
-    
     for teacher in teachers_list:
         teacher: Teacher
         subject_tags = (LP_UOI_TAG, LP_ESL_TAG)
@@ -177,6 +263,9 @@ def main():
                 else:
                     log_message: str = f'{teacher.name}\'s \"{lesson_plan.filename_source}\" has no week, file was not copied'
                     print(log_message)
+    
+    # Writing results:
+    write_results(session_folder, teachers_list)
 
 
 if __name__ == '__main__':
