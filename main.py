@@ -2,7 +2,11 @@
 import os
 import shutil
 import datetime
+
+# Excel manager:
 import openpyxl
+from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
+from openpyxl.styles import Alignment
 
 # Local class objects:
 from teacher import Teacher
@@ -154,6 +158,7 @@ def write_results(path: str, teachers_list: list):
     HEADER_CLASS_NAME_COLUMN: str = 'A'
     HEADER_TEACHER_NAME_COLUMN: str = 'B'
     HEADER_WEEK_DICT: dict = {}
+    HEADER_WEEK_WIDTH: int = 3
 
     # Creating new workbook:
     workbook = openpyxl.Workbook()
@@ -188,8 +193,18 @@ def write_results(path: str, teachers_list: list):
             column: str = alphabet[alphabet_index]
             cell_header_week: str = f'{column}{row}'
             worksheet[cell_header_week] = week
+            worksheet[cell_header_week].alignment = Alignment(horizontal='center')
             HEADER_WEEK_DICT[week] = column
             alphabet_index += 1
+
+        # Adjusting style (column width):      
+        dim_holder = DimensionHolder(worksheet)
+        for dim_column in range(3, WEEK_RANGE + 1):
+            column_index: int = dim_column - 1
+            column: str = alphabet[column_index]
+            dim_holder[column] = ColumnDimension(worksheet, min=dim_column, max=dim_column, 
+                                                 width=HEADER_WEEK_WIDTH)
+        worksheet.column_dimensions = dim_holder
 
         # Writing results:
         row = RESERVED_ROW + 1
@@ -199,8 +214,10 @@ def write_results(path: str, teachers_list: list):
             # Class and teacher information:
             cell_class_id: str = f'{HEADER_CLASS_NAME_COLUMN}{row}'
             worksheet[cell_class_id] = teacher.class_id
+            worksheet[cell_class_id].alignment = Alignment(horizontal='center')
             cell_teacher_name: str = f'{HEADER_TEACHER_NAME_COLUMN}{row}'
             worksheet[cell_teacher_name] = teacher.name
+            worksheet[cell_teacher_name].alignment = Alignment(horizontal='center')
 
             # Lesson plans:
             for lesson_plan in teacher.lp_list[subject_tag]:
@@ -209,6 +226,7 @@ def write_results(path: str, teachers_list: list):
                     column: int = HEADER_WEEK_DICT[lesson_plan.week_num]
                     cell_lesson_plan: str = f'{column}{row}'
                     worksheet[cell_lesson_plan] = '+'
+                    worksheet[cell_lesson_plan].alignment = Alignment(horizontal='center')
             
             # Next teacher:
             row += 1
